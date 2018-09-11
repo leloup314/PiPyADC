@@ -70,7 +70,8 @@ gain_flags = GAIN_1
 # When enabling the AUTOCAL flag: Any following operation that changes
 # PGA GAIN, DRATE or BUFFER flags triggers a self calibration:
 # THIS REQUIRES an additional timeout via WaitDRDY() after each such operation.
-status = BUFFER_ENABLE
+#status = BUFFER_ENABLE
+status = AUTOCAL_ENABLE
 # REG_MUX:
 # Default: positive input = AIN0, negative input = AINCOM
 mux = POS_AIN0 | NEG_AINCOM
@@ -80,7 +81,7 @@ mux = POS_AIN0 | NEG_AINCOM
 adcon = CLKOUT_OFF | SDCS_OFF | gain_flags
 # REG_DRATE: 
 # 10 SPS places a filter zero at 50 Hz and 60 Hz for line noise rejection
-drate  = DRATE_10
+drate  = DRATE_30000
 # REG_IO: No GPIOs needed
 gpio = 0x00
 ################################################################################
