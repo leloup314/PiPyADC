@@ -8,8 +8,35 @@ from ADS1256_definitions import *
 from pipyadc import ADS1256
 
 
-def logger(channels, outfile, rate=1, n_digits=3, mode='s'):
+def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
+    """
+    Method to log the data read back from a ADS1256 ADC to a file.
+    Default is to read from positive AD0-AD7 pins from 0 to 7 for single-
+    ended measurement. For differential measurement pin i and i + 1 are
+    selected as inputs. Only as many channels are read as there are names
+    in the channel list.
     
+    Parameters
+    ----------
+    
+    channels: list
+        list of strings with names of channels
+    outfile: str
+        string of output file location
+    rate: int
+        Logging rate in Hz
+    n_digits: int
+        number of decimal places to be logged into the outfile
+    mode: 's' or 'd'
+        string character descirbing the measurement mode: single-endend (s) or differential (d)
+    show_data: bool
+        whether or not to show the data every second on the stdout
+        
+    Returns
+    -------
+    
+    """
+
     # get instance of ADC Board
     adc = ADS1256()
     
@@ -43,51 +70,75 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s'):
         # write info header
         out.write('# Date: %s \n' % time.asctime())
         out.write('# Measurement in %s mode.\n' % ('differential' if mode == 'd' else 'single-ended'))
-        out.write('# ' + ' \t'.join(channels) + '\n')
+        out.write('# ' + ' \t'.join('%s / V' % c for c in channels) + '\n')
 
         # try -except clause for ending logger
         try:
-            print 'Start logging channels %s to file %s.\nPress CTRL + C to stop.' % (', '.join(channels), outfile)
+            print 'Start logging channel(s) %s to file %s.\nPress CTRL + C to stop.\n' % (', '.join(channels), outfile)
+            start = time.time()
             while True:
 
-                start = time.time()
+                readout_start = time.time()
                 
                 # get current channels 
                 raw = adc.read_sequence(actual_channels)
                 volts = [b * adc.v_per_digit for b in raw]
                  
-                end = time.time()
+                readout_end = time.time()
 
                 # write voltages to file
-                out.write('\t'.join('%.{}f'.format(n_digits) % v for v in volts)+ '\n')
+                out.write('\t'.join('%.{}f'.format(n_digits) % v for v in volts) + '\n')
 
                 # wait
                 time.sleep(1./rate)
-
-                # actual logging and readout rate
-                logging_rate =  1. / (time.time() - start)
-                readout_rate = 1. / (end - start)
+                
+                # User feedback about logging and readout rates every second
+                if time.time() - start > 1:
+					
+					# actual logging and readout rate
+					logging_rate =  1. / (time.time() - readout_start)
+					readout_rate = 1. / (readout_end - readout_start)
+					
+					# print out with flushing
+					log_string = 'Logging rate: %.2f Hz' % logging_rate + ',\t' + 'Readout rate: %.2f Hz for %i channel(s)' % (readout_rate, len(channels))
+					
+					# show values
+					if show_data:
+						# print out with flushing
+						log_string += ': %s' % ', '.join('{}: %.{}f V'.format(channels[i], n_digits) % volts[i] for i in range(len(volts)))
+					
+					# print out with flushing
+					sys.stdout.write('\r' + log_string)
+					sys.stdout.flush()
+					
+					# overwrite
+					start = time.time()
 
         except KeyboardInterrupt:
-            print '\nStopping logger...'
+            print '\nStopping logger...\nClosing %s...' % str(outfile)
     
     print 'Finished'
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
+	
+	# parse args from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--channels', help='Channel names', required=True)
     parser.add_argument('-o', '--outfile', help='Output file', required=True)
     parser.add_argument('-r', '--rate', help='Timeout between loggings', required=False)
     parser.add_argument('-d', '--digits', help='Digits for logged data', required=False)
     parser.add_argument('-m', '--mode', help='d for differential or s for single-ended mode', required=False)
+    parser.add_argument('-s', '--show', help='Show data values', required=False)
     args = vars(parser.parse_args())
-
-    channels = args['channels'].split(' ')  #['SEM_1_OBEN', 'SEM_1_UNTEN']
-    outfile = args['outfile']  #'./calibrations/calibration_0.txt'
+	
+	# read arsed args and convert if necessary
+    channels = args['channels'].split(' ')
+    outfile = args['outfile']
     rate = 1 if 'rate' not in args else float(args['rate'])
     n_digits = 3 if 'digits' not in args else int(args['digits'])
     mode = 's' if 'mode' not in args else args['mode']
+    show_data = False if 'show' not in args else bool(int(args['show']))
 
     # start logger
-    logger(channels=channels, outfile=outfile, rate=rate, n_digits=n_digits, mode=mode)
+    logger(channels=channels, outfile=outfile, rate=rate, n_digits=n_digits, mode=mode, show_data=show_data)
