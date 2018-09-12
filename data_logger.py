@@ -135,10 +135,10 @@ if __name__ == '__main__':
 	# read arsed args and convert if necessary
     channels = args['channels'].split(' ')
     outfile = args['outfile']
-    rate = 1 if 'rate' not in args else float(args['rate'])
-    n_digits = 3 if 'digits' not in args else int(args['digits'])
-    mode = 's' if 'mode' not in args else args['mode']
-    show_data = False if 'show' not in args else bool(int(args['show']))
+    rate = 1 if args['rate'] is None else float(args['rate'])
+    n_digits = 3 if args['digits'] is None else int(args['digits'])
+    mode = 's' if args['mode'] is None else args['mode']
+    show_data = False if args['show'] is None else bool(int(args['show']))
 
     # start logger
     logger(channels=channels, outfile=outfile, rate=rate, n_digits=n_digits, mode=mode, show_data=show_data)
