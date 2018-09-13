@@ -55,7 +55,7 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
     if len(channels) > 8 and mode == 's':
         raise ValueError('Only 8 single-ended input channels exist')
     elif len(channels) > 4 and mode == 'd':
-        raise ValueError>('Only 4 differential input channels exist')
+        raise ValueError('Only 4 differential input channels exist')
     else:
         if mode == 's':
             actual_channels = [_all_channels[i]|_gnd for i in range(len(channels))]
