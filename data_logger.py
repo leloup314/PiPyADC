@@ -43,7 +43,7 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
     # self-calibration
     adc.cal_self()
 
-    # channels
+    # channels TODO: represent not only positive channels
     _all_channels = [POS_AIN0, POS_AIN1,
                      POS_AIN2, POS_AIN3,
                      POS_AIN4, POS_AIN5,
@@ -57,10 +57,32 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
     elif len(channels) > 4 and mode == 'd':
         raise ValueError('Only 4 differential input channels exist')
     else:
+        # only single-ended measurements
         if mode == 's':
             actual_channels = [_all_channels[i]|_gnd for i in range(len(channels))]
+        # only differential measurements
         elif mode == 'd':
             actual_channels = [_all_channels[i]|_all_channels[i+1] for i in range(len(channels))]
+        # mix of differential and single-ended measurements
+        elif len(mode) > 1:
+            # get configuration of measurements
+            channel_config = [1 if mode[i] == 's' else 2 for i in range(len(mode))]
+            # modes are known and less than 8 channels in total 
+            if all(m in ['d', 's'] for m in mode) and sum(channel_config) <= 8:
+                i = j = 0
+                actual_channels = []
+                while i != sum(channel_config):
+                    if channel_config[j] == 1:
+                        actual_channels.append(_all_channels[i]|_gnd)
+                    else:
+                        actual_channels.append(_all_channels[i]|_all_channels[i+1])
+                    i += channel_config[j]
+                    j += 1
+            else:
+                raise ValueError('Unsupported number of channels! %i differential (%i channels) and %i single-ended (%i channels) measurements but only 8 channels total.' % (mode.count('d'),
+                                                                                                                                                                              mode.count('d') * 2,
+                                                                                                                                                                              mode.count('s'),
+                                                                                                                                                                              mode.count('s')))       
         else:
             raise ValueError('Unknown measurement mode %s. Supported modes are "d" for differential and "s" for single-ended measurements.' % mode)
 
