@@ -27,8 +27,8 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
         Logging rate in Hz
     n_digits: int
         number of decimal places to be logged into the outfile
-    mode: 's' or 'd'
-        string character descirbing the measurement mode: single-endend (s) or differential (d)
+    mode: 's' or 'd' or str of combination of both
+        string character(s) describing the measurement mode: single-endend (s) or differential (d)
     show_data: bool
         whether or not to show the data every second on the stdout
         
@@ -60,17 +60,21 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
         # only single-ended measurements
         if mode == 's':
             actual_channels = [_all_channels[i]|_gnd for i in range(len(channels))]
+        
         # only differential measurements
         elif mode == 'd':
             actual_channels = [_all_channels[i]|_all_channels[i+1] for i in range(len(channels))]
+        
         # mix of differential and single-ended measurements
         elif len(mode) > 1:
             # get configuration of measurements
             channel_config = [1 if mode[i] == 's' else 2 for i in range(len(mode))]
+            
             # modes are known and less than 8 channels in total 
             if all(m in ['d', 's'] for m in mode) and sum(channel_config) <= 8:
                 i = j = 0
                 actual_channels = []
+                
                 while i != sum(channel_config):
                     if channel_config[j] == 1:
                         actual_channels.append(_all_channels[i]|_gnd)
@@ -78,11 +82,14 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
                         actual_channels.append(_all_channels[i]|_all_channels[i+1])
                     i += channel_config[j]
                     j += 1
+                
+                if len(actual_channels) != len(channels):
+					raise ValueError('Number of channels (%i) not matching measurement mode ("%s" == %i differential & %i single-ended channels)!' % (len(channels), mode, mode.count('d'), mode.count('s')))
             else:
                 raise ValueError('Unsupported number of channels! %i differential (%i channels) and %i single-ended (%i channels) measurements but only 8 channels total.' % (mode.count('d'),
                                                                                                                                                                               mode.count('d') * 2,
                                                                                                                                                                               mode.count('s'),
-                                                                                                                                                                              mode.count('s')))       
+                                                                                                                                                                              mode.count('s')))
         else:
             raise ValueError('Unknown measurement mode %s. Supported modes are "d" for differential and "s" for single-ended measurements.' % mode)
 
@@ -91,7 +98,7 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
         
         # write info header
         out.write('# Date: %s \n' % time.asctime())
-        out.write('# Measurement in %s mode.\n' % ('differential' if mode == 'd' else 'single-ended'))
+        out.write('# Measurement in %s mode.\n' % ('differential' if mode == 'd' else 'single-ended' if mode =='s' else mode))
         out.write('# ' + ' \t'.join('%s / V' % c for c in channels) + '\n')
 
         # try -except clause for ending logger
@@ -122,7 +129,7 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
 					readout_rate = 1. / (readout_end - readout_start)
 					
 					# print out with flushing
-					log_string = 'Logging rate: %.2f Hz' % logging_rate + ',\t' + 'Readout rate: %.2f Hz for %i channel(s)' % (readout_rate, len(channels))
+					log_string = 'Logging rate: %.2f Hz' % logging_rate + ',\t' + 'Readout rate: %.2f Hz for %i channel(s)' % (readout_rate, len(actual_channels))
 					
 					# show values
 					if show_data:
