@@ -99,7 +99,7 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
         # write info header
         out.write('# Date: %s \n' % time.asctime())
         out.write('# Measurement in %s mode.\n' % ('differential' if mode == 'd' else 'single-ended' if mode =='s' else mode))
-        out.write('# ' + ' \t'.join('%s / V' % c for c in channels) + '\n')
+        out.write('# Timestamp / s\t' + ' \t'.join('%s / V' % c for c in channels) + '\n')
 
         # try -except clause for ending logger
         try:
@@ -114,6 +114,9 @@ def logger(channels, outfile, rate=1, n_digits=3, mode='s', show_data=False):
                 volts = [b * adc.v_per_digit for b in raw]
                  
                 readout_end = time.time()
+                
+                # write timestamp to file
+                out.write('%f\t' % time.time())
 
                 # write voltages to file
                 out.write('\t'.join('%.{}f'.format(n_digits) % v for v in volts) + '\n')
